@@ -1,3 +1,7 @@
+# Project Debug Files
+Debug/
+*.sdf
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
