@@ -77,29 +77,29 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\00Battle\QuickDraw.cpp" />
-    <ClCompile Include="..\00Battle\Timer.cpp" />
     <ClCompile Include="Actor.cpp" />
     <ClCompile Include="Bullet.cpp" />
     <ClCompile Include="Maze.cpp" />
     <ClCompile Include="MazeCreator.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="QuickDraw.cpp" />
     <ClCompile Include="Rat.cpp" />
     <ClCompile Include="RatFactory.cpp" />
     <ClCompile Include="Rats.cpp" />
+    <ClCompile Include="Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\00Battle\QuickDraw.h" />
-    <ClInclude Include="..\00Battle\Timer.h" />
     <ClInclude Include="Actor.h" />
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Maze.h" />
     <ClInclude Include="MazeCreator.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="QuickDraw.h" />
     <ClInclude Include="Rat.h" />
     <ClInclude Include="RatFactory.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
