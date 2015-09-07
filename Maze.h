@@ -41,7 +41,10 @@ private:
 	std::vector <Actor *> actors;
 
 public:
-	Maze(void);
+	// SLP: added isServer flag so the server creates a maze when the object is created
+	// but the client doesn't, just allocates space so the maze data can be deserialized
+	// into it.
+	Maze(bool isServer);
 	~Maze(void);
 
 	// Run a simulation step of the game environment.

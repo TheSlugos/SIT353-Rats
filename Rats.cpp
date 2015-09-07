@@ -21,11 +21,16 @@ void server()
 
 	QuickDraw window;
 	View & view = (View &)window;
-	Controller & controller = (Controller &)window;
+	
+	// SLP: Don't need the controller as we are the server
+	// Controller & controller = (Controller &)window;
 
-	Maze model;
-	Player * player = new Player(controller);
-	model.addPlayer(player);
+	// we are the server
+	Maze model(true);
+	
+	// SLP: Player only added once a client connects
+	/*Player * player = new Player(controller);
+	model.addPlayer(player);*/
 
 	// Create a timer to measure the real time since the previous game cycle.
 	Timer timer;
@@ -54,7 +59,10 @@ void server()
 		view.clearScreen();
 		double offsetx = 0.0;
 		double offsety = 0.0;
-		(*player).getPosition(offsetx, offsety);
+		
+		// SLP: Don't need to display the map either as we are the server
+		// but leaving it for now for testing
+		// (*player).getPosition(offsetx, offsety);
 		model.display(view, offsetx, offsety, scale);
 		view.swapBuffer();
 
@@ -87,7 +95,8 @@ void client()
 	View & view = (View &)window;
 	Controller & controller = (Controller &)window;
 
-	Maze model;
+	Maze model(false); // SLP: we are not the server
+
 	Player * player = new Player(controller);
 	model.addPlayer(player);
 
