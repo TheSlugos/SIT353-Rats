@@ -1,4 +1,4 @@
-enum MESSAGEID { JOIN, ACCEPTED, REJECTED, UPDATE, ADDLINK, REMOVELINKS };
+enum MESSAGEID { JOIN, ACCEPTED, REJECTED, UPDATE, WALLS };
 enum REJECTREASON { GAMEFULL, ALREADYJOINED };
 
 class MsgJoin
@@ -27,25 +27,25 @@ public:
 	MsgRejected(int reason) : _Id(REJECTED), _Reason(reason) {}
 };
 
-class MsgAddLink
-{
-public:
-	int _Id;
-	int _StartX;
-	int _StartY;
-	int _DestX;
-	int _DestY;
+//class MsgAddLink
+//{
+//public:
+//	int _Id;
+//	int _StartX;
+//	int _StartY;
+//	int _DestX;
+//	int _DestY;
+//
+//	MsgAddLink(int sx, int sy, int dx, int dy) : _Id(ADDLINK), _StartX(sx), _StartY(sy),
+//		_DestX(dx), _DestY(dy) {}
+//};
 
-	MsgAddLink(int sx, int sy, int dx, int dy) : _Id(ADDLINK), _StartX(sx), _StartY(sy),
-		_DestX(dx), _DestY(dy) {}
-};
-
-class MsgRemoveLinks
-{
-public:
-	int _Id;
-	int _X;
-	int _Y;
-
-	MsgRemoveLinks(int x, int y) : _Id(REMOVELINKS), _X(x), _Y(y) {}
-};
+//class MsgRemoveLinks
+//{
+//public:
+//	int _Id;
+//	int _X;
+//	int _Y;
+//
+//	MsgRemoveLinks(int x, int y) : _Id(REMOVELINKS), _X(x), _Y(y) {}
+//};

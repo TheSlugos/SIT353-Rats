@@ -21,14 +21,19 @@ private:
 	int y2;
 
 public:
-	Wall (int xa, int ya, int xb, int yb);
-	~Wall ();
+	Wall(int xa, int ya, int xb, int yb);
+	~Wall();
 
 	// Draw the wall.
-	void display (View & view, double offsetx, double offsety, double scale);
+	void display(View & view, double offsetx, double offsety, double scale);
 
 	// Check if the wall intersects the given line segment.
-	bool collides (double xa, double ya, double xb, double yb);
+	bool collides(double xa, double ya, double xb, double yb);
+
+	int GetX1() { return x1; }
+	int GetY1() { return y1; }
+	int GetX2() { return x2; }
+	int GetY2() { return y2; }
 };
 
 class Maze : public Model
@@ -66,6 +71,9 @@ public:
 
 	// Retrieve the list of actors.
 	const std::vector <Actor *> getActors ();
+
+	char * serializewalls(int msgCode, size_t& size);
+	void deserializewalls(char * wallData);
 };
 
 #endif // __RATS_MAZE

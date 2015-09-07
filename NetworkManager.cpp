@@ -170,7 +170,7 @@ bool NetworkManager::ReceiveData(unsigned long &sourceIP, unsigned short &source
 			}
 			else
 			{
-				cerr << "ERROR: sending data (" << WSAGetLastError() << ")" << endl;
+				cerr << "ERROR: receiving data (" << WSAGetLastError() << ")" << endl;
 				result = false;
 			}
 		}
