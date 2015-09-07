@@ -1,4 +1,5 @@
 #include "MazeCreator.h"
+#include <ctime>
 
 // Node represent points where adjacent walls can join up.
 typedef struct Node
@@ -11,6 +12,9 @@ typedef struct Node
 
 std::vector <Wall *> MazeCreator::createMaze (int sizex, int sizey, double scale)
 {
+	// seed the rng
+	srand(time(NULL));
+
 	// The resulting set of walls for the maze.
 	std::vector <Wall *> walls;
 

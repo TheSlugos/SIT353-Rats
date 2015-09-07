@@ -238,3 +238,70 @@ const std::vector <Actor *> Maze::getActors ()
 {
 	return actors;
 }
+
+char * Maze::serializewalls(int msgCode, size_t& size)
+{
+	size_t wallSize = sizeof(Wall);
+	size_t noOfWalls = walls.size();
+
+	// total size is msgcode + no of walls + wall data
+	size = sizeof(int) + sizeof(int) + wallSize * noOfWalls;
+
+	char * data = new char[size];
+
+	int ptr = 0;
+
+	// add message code to message data
+	*(int*)data = msgCode;
+	ptr += sizeof(int);
+
+	// add number of walls to message data
+	*(int*)(data + ptr) = noOfWalls;
+	ptr += sizeof(int);
+
+	// add each wall
+	for (int i = 0; i < walls.size(); i++)
+	{
+		// add x1
+		int * x1 = (int*)(data + ptr);
+		(*x1) = walls[i]->GetX1();
+		ptr += sizeof(int);
+		// add y1
+		int * y1 = (int*)(data + ptr);
+		(*y1) = walls[i]->GetY1();
+		ptr += sizeof(int);
+		// add x2
+		int * x2 = (int*)(data + ptr);
+		(*x2) = walls[i]->GetX2();
+		ptr += sizeof(int);
+		// add y1
+		int * y2 = (int*)(data + ptr);
+		(*y2) = walls[i]->GetY2();
+		ptr += sizeof(int);
+	}
+
+	return data;
+}
+
+void Maze::deserializewalls(char * wallData)
+{
+	int ptr = 0;
+
+	// empty walls
+	walls.clear();
+
+	int noOfWalls = *(int*)wallData;
+	ptr += sizeof(int);
+
+	for (int i = 0; i < noOfWalls; i++)
+	{
+		walls.push_back(
+			new Wall(
+			*(int*)(wallData + ptr),					// x1
+			*(int*)(wallData + ptr + sizeof(int)),		// y1, skip x1
+			*(int*)(wallData + ptr + 2 * sizeof(int)),	// x2, skip x1, y1
+			*(int*)(wallData + ptr + 3 * sizeof(int))	// y2, skip x1, y1, x2
+			));
+		ptr += 4 * sizeof(int);
+	}
+}

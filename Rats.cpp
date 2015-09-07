@@ -19,7 +19,7 @@ const int CLIENTARGS = 4;			// program.exe <client-port> <server-ip> <server-por
 const int IDXMYPORT = 1;			// argv position of port of this machine	
 const int IDXREMOTEHOST = 2;		// argv position of address of remote machine
 const int IDXREMOTEPORT = 3;		// argv position of remote machine port
-const int MAX_MSG_SIZE = 10000;		// size of maximum message that is handled
+const int MAX_MSG_SIZE = 50000;		// size of maximum message that is handled
 
 const double REFRESH_RATE = 1.0 / 30.0;	// 30fps
 
@@ -112,6 +112,15 @@ void server(int port)
 				case JOIN:
 				{
 					cout << "JOIN: request from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+
+					// send walls to client
+					size_t datasize;
+					char * data = model.serializewalls(WALLS, datasize);
+
+					// send data to the newly joined client
+					nm.SendData(remoteIP, remotePort, data, datasize);
+
+					delete[] data;
 				} break;
 			} // end switch
 		}
@@ -209,6 +218,45 @@ void client(int port, unsigned long serverIP, int serverPort)
 		// process player input
 
 		// receive updates from the server
+		// handle received data
+		unsigned short remotePort;
+		unsigned long remoteIP;
+		char receivedData[MAX_MSG_SIZE];
+		size_t bytesReceived = MAX_MSG_SIZE;
+
+		if (nm.ReceiveData(remoteIP, remotePort, receivedData, bytesReceived))
+		{
+			int * msgType = (int*)receivedData;
+
+			// handle message based on type
+			switch (*msgType)
+			{
+				case JOIN:
+				{
+					cout << "JOIN: request from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+
+					// send walls to client
+					size_t datasize;
+					char * data = model.serializewalls(WALLS, datasize);
+
+					// send data to the newly joined client
+					nm.SendData(remoteIP, remotePort, data, datasize);
+
+					delete[] data;
+				} break;
+
+				case WALLS:
+				{
+					cout << "Received wall data from server" << endl;
+					cout << "Reading wall data" << endl;
+
+					// received data holds wall data
+					// first int contains msgcode, skip that
+					char * msgData = receivedData + sizeof(int);
+					model.deserializewalls(msgData);
+				} break;
+			} // end switch
+		}
 
 		// console commands
 		if (_kbhit())
