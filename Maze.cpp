@@ -76,20 +76,24 @@ bool Wall::collides (double xa, double ya, double xb, double yb)
 	return false;
 }
 
-Maze::Maze(void)
+Maze::Maze(bool isServer)
 {
-	walls.push_back (new Wall (-300, 200, 300, 200));
-	walls.push_back (new Wall (-300, -200, 300, -200));
-	walls.push_back (new Wall (-300, -200, -300, 200));
-	walls.push_back (new Wall (300, -200, 300, 200));
+	// SLP: only create a new maze if this is the server
+	if (isServer)
+	{
+		walls.push_back(new Wall(-300, 200, 300, 200));
+		walls.push_back(new Wall(-300, -200, 300, -200));
+		walls.push_back(new Wall(-300, -200, -300, 200));
+		walls.push_back(new Wall(300, -200, 300, 200));
 
-	walls.push_back (new Wall (-100, -40, 100, 60));
-	walls.push_back (new Wall (100, -40, -100, 60));
+		walls.push_back(new Wall(-100, -40, 100, 60));
+		walls.push_back(new Wall(100, -40, -100, 60));
 
-	walls = MazeCreator::createMaze (50, 50, 80);
+		walls = MazeCreator::createMaze(50, 50, 80);
 
-	for (int i = 0; i < 15; i++)
-		actors.push_back (new RatFactory ());
+		for (int i = 0; i < 15; i++)
+			actors.push_back(new RatFactory());
+	}
 }
 
 
