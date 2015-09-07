@@ -2,8 +2,11 @@
 #include <string>
 #include <conio.h>
 
-#include <QuickDraw.h>
-#include <Timer.h>
+#include "NetworkManager.h"
+#include "Messages.h"
+
+#include "QuickDraw.h"
+#include "Timer.h"
 
 #include "Maze.h"
 #include "Actor.h"
@@ -13,11 +16,27 @@ using namespace std;
 // constants
 const int SERVERARGS = 2;	// program.exe <server-port>
 const int CLIENTARGS = 4;	// program.exe <client-port> <server-ip> <server-port>
+const int IDXMYPORT = 1;	// argv position of port of this machine	
+const int IDXREMOTEHOST = 2;	// argv position of address of remote machine
+const int IDXREMOTEPORT = 3;	// argv position of remote machine port
 
 // Runs the server component of the application
-void server()
+void server(int port)
 {
-	cout << "Running as SERVER..." << endl;
+	// SLP: Create network manager to manage send & receive over network
+	NetworkManager nm;
+
+	// setup and bind socket to supplied port number
+	nm.SetupSocket(port);
+
+	if (nm.Failed())
+	{
+		cout << "Network Error, exiting program" << endl;
+
+		return;
+	}
+
+	cout << "Running as SERVER on " << nm.MyIPAddress() << ":"<< nm.MyPortNumber() << endl;
 
 	QuickDraw window;
 	View & view = (View &)window;
@@ -66,7 +85,27 @@ void server()
 		model.display(view, offsetx, offsety, scale);
 		view.swapBuffer();
 
-		// console commands
+		// handle received data
+		size_t bytesReceived;
+		unsigned short remotePort;
+		unsigned long remoteIP;
+		char * receivedData;
+
+		if (nm.ReceiveData(remoteIP, remotePort, receivedData, bytesReceived))
+		{
+			int * msgType = (int*)receivedData;
+
+			// handle message based on type
+			switch (*msgType)
+			{
+				case JOIN:
+				{
+					cout << "JOIN: request from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+				} break;
+			} // end switch
+		}
+
+		// process console commands
 		if (_kbhit())
 		{
 			string input;
@@ -84,6 +123,7 @@ void server()
 	}
 
 	// TODO: cleanup sockets, etc
+	nm.Close();
 
 } // end server
 
@@ -153,10 +193,11 @@ void client()
 
 int main(int argc, char * argv [])
 {
+	// TODO:SLP:check entered values and display correct usage message
 	if (argc == SERVERARGS)
 	{
 		// run server
-		server();
+		server(atoi(argv[IDXMYPORT]));
 	}
 	else if (argc == CLIENTARGS)
 	{
