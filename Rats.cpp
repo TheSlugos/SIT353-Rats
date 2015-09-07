@@ -2,8 +2,11 @@
 #include <string>
 #include <conio.h>
 
-#include <QuickDraw.h>
-#include <Timer.h>
+#include "NetworkManager.h"
+#include "Messages.h"
+
+#include "QuickDraw.h"
+#include "Timer.h"
 
 #include "Maze.h"
 #include "Actor.h"
@@ -11,13 +14,40 @@
 using namespace std;
 
 // constants
-const int SERVERARGS = 2;	// program.exe <server-port>
-const int CLIENTARGS = 4;	// program.exe <client-port> <server-ip> <server-port>
+const int SERVERARGS = 2;			// program.exe <server-port>
+const int CLIENTARGS = 4;			// program.exe <client-port> <server-ip> <server-port>
+const int IDXMYPORT = 1;			// argv position of port of this machine	
+const int IDXREMOTEHOST = 2;		// argv position of address of remote machine
+const int IDXREMOTEPORT = 3;		// argv position of remote machine port
+const int MAX_MSG_SIZE = 10000;		// size of maximum message that is handled
+
+const double REFRESH_RATE = 1.0 / 30.0;	// 30fps
+
+// structure to hold address and id of identified network nodes, servers or clients
+typedef struct NetworkNode
+{
+	short id;						// player id
+	unsigned long ipAddress;		// player ip address
+	unsigned short portNumber;		// player port #
+} NETWORKNODE;
 
 // Runs the server component of the application
-void server()
+void server(int port)
 {
-	cout << "Running as SERVER..." << endl;
+	// SLP: Create network manager to manage send & receive over network
+	NetworkManager nm;
+
+	// setup and bind socket to supplied port number
+	nm.SetupSocket(port);
+
+	if (nm.Failed())
+	{
+		cout << "Network Error, exiting program" << endl;
+
+		return;
+	}
+
+	cout << "Running as SERVER on " << nm.MyIPAddress() << ":"<< nm.MyPortNumber() << endl;
 
 	QuickDraw window;
 	View & view = (View &)window;
@@ -66,7 +96,27 @@ void server()
 		model.display(view, offsetx, offsety, scale);
 		view.swapBuffer();
 
-		// console commands
+		// handle received data
+		unsigned short remotePort;
+		unsigned long remoteIP;
+		char receivedData[MAX_MSG_SIZE];
+		size_t bytesReceived = MAX_MSG_SIZE;
+
+		if (nm.ReceiveData(remoteIP, remotePort, receivedData, bytesReceived))
+		{
+			int * msgType = (int*)receivedData;
+
+			// handle message based on type
+			switch (*msgType)
+			{
+				case JOIN:
+				{
+					cout << "JOIN: request from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+				} break;
+			} // end switch
+		}
+
+		// process console commands
 		if (_kbhit())
 		{
 			string input;
@@ -84,13 +134,31 @@ void server()
 	}
 
 	// TODO: cleanup sockets, etc
+	nm.Close();
 
 } // end server
 
-void client()
+void client(int port, unsigned long serverIP, int serverPort)
 {
-	cout << "Running as CLIENT..." << endl;
+	// SLP: create network manager to facilitate communication
+	NetworkManager nm;
 
+	// create socket and bind port
+	nm.SetupSocket(port);
+
+	if (nm.Failed())
+	{
+		cout << "Error setting up network, exiting" << endl;
+		return;
+	}
+
+	cout << "Running as CLIENT on " << nm.MyIPAddress() << ":" << nm.MyPortNumber() << endl;
+
+	// SLP:TEST:Send a join message to the server
+	MsgJoin joinMsg;
+	nm.SendData(serverIP, serverPort, (char*)&joinMsg, sizeof(joinMsg));
+
+	// SLP: the following lines should only be used once the server has connected
 	QuickDraw window;
 	View & view = (View &)window;
 	Controller & controller = (Controller &)window;
@@ -99,12 +167,14 @@ void client()
 
 	Player * player = new Player(controller);
 	model.addPlayer(player);
+	// SLP: to here
 
 	// Create a timer to measure the real time since the previous game cycle.
 	Timer timer;
 	timer.mark(); // zero the timer.
 	double lasttime = timer.interval();
 	double avgdeltat = 0.0;
+	double refreshtime = lasttime;
 
 	double scale = 1.0;
 
@@ -121,15 +191,24 @@ void client()
 		lasttime = lasttime + deltat;
 
 		// Allow the environment to update.
-		model.update(deltat);
+		// model.update(deltat); // SLP: server only
 
 		// Schedule a screen update event.
-		view.clearScreen();
-		double offsetx = 0.0;
-		double offsety = 0.0;
-		(*player).getPosition(offsetx, offsety);
-		model.display(view, offsetx, offsety, scale);
-		view.swapBuffer();
+		if ( currtime - refreshtime > REFRESH_RATE)
+		{
+			refreshtime = currtime;
+
+			view.clearScreen();
+			double offsetx = 0.0;
+			double offsety = 0.0;
+			(*player).getPosition(offsetx, offsety);
+			model.display(view, offsetx, offsety, scale);
+			view.swapBuffer();
+		}
+
+		// process player input
+
+		// receive updates from the server
 
 		// console commands
 		if (_kbhit())
@@ -153,15 +232,17 @@ void client()
 
 int main(int argc, char * argv [])
 {
+	// TODO:SLP:check entered values and display correct usage message
 	if (argc == SERVERARGS)
 	{
 		// run server
-		server();
+		server(atoi(argv[IDXMYPORT]));
 	}
 	else if (argc == CLIENTARGS)
 	{
 		// run client
-		client();
+		client(atoi(argv[IDXMYPORT]), inet_addr(argv[IDXREMOTEHOST]), 
+			atoi(argv[IDXREMOTEPORT]));
 	}
 
 	return 0;
