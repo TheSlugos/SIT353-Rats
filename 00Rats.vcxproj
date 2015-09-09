@@ -83,6 +83,7 @@
     <ClCompile Include="MazeCreator.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
+    <ClCompile Include="OtherPlayer.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="QuickDraw.cpp" />
     <ClCompile Include="Rat.cpp" />
@@ -98,6 +99,7 @@
     <ClInclude Include="Messages.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="NetworkManager.h" />
+    <ClInclude Include="OtherPlayer.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="QuickDraw.h" />
     <ClInclude Include="Rat.h" />

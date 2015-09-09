@@ -1,4 +1,4 @@
-enum MESSAGEID { JOIN, ACCEPTED, REJECTED, UPDATE, WALLS };
+enum MESSAGEID { JOIN, JOINACCEPT, REJECTED, UPDATE, MAPDATA, MAPREQUEST };
 enum REJECTREASON { GAMEFULL, ALREADYJOINED };
 
 class MsgJoin
@@ -15,7 +15,7 @@ public:
 	int _Id;
 	int _PlayerNo;
 
-	MsgAccepted(int playerNo) : _Id(ACCEPTED), _PlayerNo(playerNo) {}
+	MsgAccepted(int playerNo) : _Id(JOINACCEPT), _PlayerNo(playerNo) {}
 };
 
 class MsgRejected
