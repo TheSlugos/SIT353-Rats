@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <conio.h>
+#include <vector>
 
 #include "NetworkManager.h"
 #include "Messages.h"
@@ -10,6 +11,7 @@
 
 #include "Maze.h"
 #include "Actor.h"
+#include "OtherPlayer.h"
 
 using namespace std;
 
@@ -34,6 +36,12 @@ typedef struct NetworkNode
 // Runs the server component of the application
 void server(int port)
 {
+	// stores the id of the next player to join the game
+	unsigned int nextPlayerId = 0;
+
+	// holds id information for connected players
+	vector<NETWORKNODE> players;
+
 	// SLP: Create network manager to manage send & receive over network
 	NetworkManager nm;
 
@@ -111,11 +119,74 @@ void server(int port)
 			{
 				case JOIN:
 				{
+					// new join request, allocate id to new player
+					int playerId = nextPlayerId;
+
 					cout << "JOIN: request from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+					
+					// check if they are already on the list
+					for (unsigned int i = 0; i < players.size(); i++)
+					{
+						if (players[i].ipAddress == remoteIP && players[i].portNumber == remotePort)
+						{
+							// allocate existing id, maybe lost join accept packet
+							playerId = players[i].id;
+							break;
+						}
+					}
+
+					if (playerId == nextPlayerId)
+					{
+						// create new dummy player
+						OtherPlayer * newPlayer = new OtherPlayer();
+						newPlayer->SetPlayerId(playerId);
+						
+						// add new player to the model
+						model.addActor(newPlayer);
+
+						// add new connection data for this player
+						NETWORKNODE newNode;
+						newNode.ipAddress = remoteIP;
+						newNode.portNumber = remotePort;
+						newNode.id = playerId;
+
+						players.push_back(newNode);
+						
+						// set id for next player
+						nextPlayerId++;
+					}
+					
+					cout << "Sending JOINACCEPT msg to " << nm.IPtoString(remoteIP) << ":" << remotePort
+						<< " with PlayerId: " << playerId << endl << endl;
+
+					cout << "Joined Players are :" << endl;
+
+					for (unsigned int i = 0; i < players.size(); i++)
+					{
+						cout << "\t" << "* " << players[i].id << "(" << nm.IPtoString(players[i].ipAddress)
+							<< ":" << players[i].portNumber << ")" << endl;
+					}
+
+					// create a join accept message
+					MsgAccepted * msg = new MsgAccepted(playerId);
+
+					// send join accept message to client
+					size_t datasize = sizeof(MsgAccepted);
+					char * data = (char*)msg;
+
+					// send data to the client
+					nm.SendData(remoteIP, remotePort, data, datasize);
+
+					delete msg;
+				} break;
+
+				case MAPDATA:
+				{
+					cout << "MAPDATA: request from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
 
 					// send walls to client
 					size_t datasize;
-					char * data = model.serializewalls(WALLS, datasize);
+					char * data = model.serializewalls(MAPDATA, datasize);
 
 					// send data to the newly joined client
 					nm.SendData(remoteIP, remotePort, data, datasize);
@@ -149,6 +220,12 @@ void server(int port)
 
 void client(int port, unsigned long serverIP, int serverPort)
 {
+	// stores the id of the server we are communicating with (for multiple)
+	int currentServer = -1;
+
+	// stores list of known servers (for multiple)
+	vector<NETWORKNODE> servers;
+
 	// SLP: create network manager to facilitate communication
 	NetworkManager nm;
 
@@ -163,9 +240,19 @@ void client(int port, unsigned long serverIP, int serverPort)
 
 	cout << "Running as CLIENT on " << nm.MyIPAddress() << ":" << nm.MyPortNumber() << endl;
 
-	// SLP:TEST:Send a join message to the server
+	// add the supplied server details
+	NETWORKNODE newServer;
+	newServer.id = ++currentServer;
+	newServer.ipAddress = serverIP;
+	newServer.portNumber = serverPort;
+	
+	// add server details to list of known servers
+	servers.push_back(newServer);
+
+	// SLP:TEST:Send a join message to the current server
 	MsgJoin joinMsg;
-	nm.SendData(serverIP, serverPort, (char*)&joinMsg, sizeof(joinMsg));
+	// using currentServer as idx only works if we don't delete servers, and add them in correct order
+	nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, (char*)&joinMsg, sizeof(joinMsg));
 
 	// SLP: the following lines should only be used once the server has connected
 	QuickDraw window;
@@ -202,6 +289,8 @@ void client(int port, unsigned long serverIP, int serverPort)
 		// Allow the environment to update.
 		// model.update(deltat); // SLP: server only
 
+		// process player input
+
 		// Schedule a screen update event.
 		if ( currtime - refreshtime > REFRESH_RATE)
 		{
@@ -214,8 +303,6 @@ void client(int port, unsigned long serverIP, int serverPort)
 			model.display(view, offsetx, offsety, scale);
 			view.swapBuffer();
 		}
-
-		// process player input
 
 		// receive updates from the server
 		// handle received data
@@ -231,21 +318,21 @@ void client(int port, unsigned long serverIP, int serverPort)
 			// handle message based on type
 			switch (*msgType)
 			{
-				case JOIN:
+				case JOINACCEPT:
 				{
-					cout << "JOIN: request from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+					cout << "JOINACCEPT msg received from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+					MsgAccepted * msg = (MsgAccepted*)receivedData;
 
-					// send walls to client
-					size_t datasize;
-					char * data = model.serializewalls(WALLS, datasize);
+					cout << "Received player id " << msg->_PlayerNo << endl;
 
-					// send data to the newly joined client
-					nm.SendData(remoteIP, remotePort, data, datasize);
+					// store the given player id, used later for deserializing actor data from server
+					player->SetPlayerId(msg->_PlayerNo);
 
-					delete[] data;
+					// have player id, request map data from server
+
 				} break;
 
-				case WALLS:
+				case MAPDATA:
 				{
 					cout << "Received wall data from server" << endl;
 					cout << "Reading wall data" << endl;

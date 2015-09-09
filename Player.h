@@ -7,6 +7,7 @@ class Player : public Actor
 {
 private:
 	Controller & controller;
+	int _PlayerId;
 
 public:
 	Player (Controller & cntrller);
@@ -17,6 +18,9 @@ public:
 
 	// Show the player.
 	virtual void display (View & view, double offsetx, double offsety, double scale);
+
+	void SetPlayerId(int playerId) { _PlayerId = playerId; }
+	int GetPlayerId() { return _PlayerId; }
 };
 
 #endif // __RATS_PLAYER

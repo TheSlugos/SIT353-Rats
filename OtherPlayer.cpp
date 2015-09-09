@@ -1,9 +1,11 @@
 #include "Maze.h"
-#include "Player.h"
+#include "OtherPlayer.h"
 #include "Bullet.h"
 
-Player::Player (Controller & cntrller) : Actor (), controller (cntrller)
+OtherPlayer::OtherPlayer() : Actor()
 {
+	_Command = 0;
+
 	posx = 0;
 	posy = 0;
 
@@ -13,11 +15,11 @@ Player::Player (Controller & cntrller) : Actor (), controller (cntrller)
 	type = PLAYER;
 }
 
-Player::~Player(void)
+OtherPlayer::~OtherPlayer(void)
 {
 }
 
-bool Player::update (Model & model, double deltat)
+bool OtherPlayer::update(Model & model, double deltat)
 
 {
 	double newposx = posx;
@@ -27,7 +29,7 @@ bool Player::update (Model & model, double deltat)
 	double bulletposy = posy;
 	bool bullet = false;
 
-	char c = controller.lastKey ();
+	char c = _Command;
 	switch (c)
 	{
 	case 'W': newposy -= speed * deltat; break;
@@ -43,30 +45,30 @@ bool Player::update (Model & model, double deltat)
 		;
 	}
 
-	if (model.canMove (posx, posy, newposx, newposy))
+	if (model.canMove(posx, posy, newposx, newposy))
 	{
 		posx = newposx;
 		posy = newposy;
 	}
-	if (bullet && model.canMove (posx, posy, bulletposx, bulletposy))
+	if (bullet && model.canMove(posx, posy, bulletposx, bulletposy))
 	{
-		model.addActor (new Bullet (bulletposx, bulletposy, speed * (bulletposx - posx) / radius, speed * (bulletposy - posy) / radius, this));
+		model.addActor(new Bullet(bulletposx, bulletposy, speed * (bulletposx - posx) / radius, speed * (bulletposy - posy) / radius, this));
 	}
 
 	return true;
 }
 
-void Player::display (View & view, double offsetx, double offsety, double scale)
+void OtherPlayer::display(View & view, double offsetx, double offsety, double scale)
 
 {
 	// Find center of screen.
 	int cx, cy;
-	view.screenSize (cx, cy);
+	view.screenSize(cx, cy);
 	cx = cx / 2;
 	cy = cy / 2;
 
-	int x = (int) ((posx - (offsetx - cx)) * scale);
-	int y = (int) ((posy - (offsety - cy)) * scale);
+	int x = (int)((posx - (offsetx - cx)) * scale);
+	int y = (int)((posy - (offsety - cy)) * scale);
 
-	view.drawSolidCircle (x, y, (int) (scale * radius), 230, 230, 80);
+	view.drawSolidCircle(x, y, (int)(scale * radius), 230, 230, 80);
 }
