@@ -1,4 +1,4 @@
-enum MESSAGEID { JOIN, JOINACCEPT, REJECTED, UPDATE, MAPDATA, MAPREQUEST };
+enum MESSAGEID { JOIN, JOINACCEPT, REJECTED, UPDATE, MAPDATA, MAPREQUEST, COMMAND };
 enum REJECTREASON { GAMEFULL, ALREADYJOINED };
 
 class MsgJoin
@@ -25,6 +25,24 @@ public:
 	int _Reason;
 
 	MsgRejected(int reason) : _Id(REJECTED), _Reason(reason) {}
+};
+
+class MsgMapRequest
+{
+public:
+	int _Id;
+
+	MsgMapRequest() : _Id(MAPREQUEST) {}
+};
+
+class MsgPlayerCommand
+{
+public:
+	int _Id;
+	int _PlayerId;
+	char _Command;
+
+	MsgPlayerCommand(int playerId, char command) : _Id(COMMAND), _PlayerId(playerId), _Command(command) {}
 };
 
 //class MsgAddLink

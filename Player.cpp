@@ -17,7 +17,12 @@ Player::~Player(void)
 {
 }
 
-bool Player::update (Model & model, double deltat)
+bool Player::update(Model & model, double deltat)
+{
+	return true;
+}
+
+bool Player::update (Model & model, double deltat, char& command)
 
 {
 	double newposx = posx;
@@ -27,31 +32,32 @@ bool Player::update (Model & model, double deltat)
 	double bulletposy = posy;
 	bool bullet = false;
 
-	char c = controller.lastKey ();
-	switch (c)
+	command = controller.lastKey ();
+	switch (command)
 	{
 	case 'W': newposy -= speed * deltat; break;
 	case 'S': newposy += speed * deltat; break;
 	case 'A': newposx -= speed * deltat; break;
 	case 'D': newposx += speed * deltat; break;
-	case VK_UP: bulletposy -= 1.3 * radius; bullet = true; break;
+	/*case VK_UP: bulletposy -= 1.3 * radius; bullet = true; break;
 	case VK_DOWN: bulletposy += 1.3 * radius; bullet = true; break;
 	case VK_LEFT: bulletposx -= 1.3 * radius; bullet = true; break;
-	case VK_RIGHT: bulletposx += 1.3 * radius; bullet = true; break;
+	case VK_RIGHT: bulletposx += 1.3 * radius; bullet = true; break;*/
 	default:
 		// unknown key.
 		;
 	}
 
+	// update local copy, server updates overrides
 	if (model.canMove (posx, posy, newposx, newposy))
 	{
 		posx = newposx;
 		posy = newposy;
 	}
-	if (bullet && model.canMove (posx, posy, bulletposx, bulletposy))
-	{
-		model.addActor (new Bullet (bulletposx, bulletposy, speed * (bulletposx - posx) / radius, speed * (bulletposy - posy) / radius, this));
-	}
+	//if (bullet && model.canMove (posx, posy, bulletposx, bulletposy))
+	//{
+	//	model.addActor (new Bullet (bulletposx, bulletposy, speed * (bulletposx - posx) / radius, speed * (bulletposy - posy) / radius, this));
+	//}
 
 	return true;
 }

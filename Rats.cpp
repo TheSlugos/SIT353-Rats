@@ -180,7 +180,7 @@ void server(int port)
 					delete msg;
 				} break;
 
-				case MAPDATA:
+				case MAPREQUEST:
 				{
 					cout << "MAPDATA: request from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
 
@@ -290,6 +290,33 @@ void client(int port, unsigned long serverIP, int serverPort)
 		// model.update(deltat); // SLP: server only
 
 		// process player input
+		char command;
+		player->update(model, deltat, command);
+
+		// send command to server
+		MsgPlayerCommand * msgCommand = new MsgPlayerCommand(player->GetPlayerId(), command);
+		char * data = (char*)msgCommand;
+		size_t dataSize = sizeof(MsgPlayerCommand);
+
+		nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
+			data, dataSize);
+
+		delete msgCommand;
+
+		//switch (command)
+		//{
+		//case 'W': cout << "Move Player Up" << endl; break;
+		//case 'S': cout << "Move Player Down" << endl; break;
+		//case 'A': cout << "Move Player Left" << endl; break;
+		//case 'D': cout << "Move Player Right" << endl; break;
+		//case VK_UP: cout << "Fire Up" << endl; break;
+		//case VK_DOWN: cout << "Fire Down" << endl; break;
+		//case VK_LEFT: cout << "Fire Left" << endl; break;
+		//case VK_RIGHT: cout << "Fire Right" << endl; break;
+		//default:
+		//	// unknown key.
+		//	;
+		//}
 
 		// Schedule a screen update event.
 		if ( currtime - refreshtime > REFRESH_RATE)
@@ -329,7 +356,17 @@ void client(int port, unsigned long serverIP, int serverPort)
 					player->SetPlayerId(msg->_PlayerNo);
 
 					// have player id, request map data from server
+					MsgMapRequest * msgMap = new MsgMapRequest();
 
+					cout << "MAPREQUEST: sending to server" << endl;
+
+					char * data = (char*)msgMap;
+					size_t dataSize = sizeof(msgMap);
+
+					nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
+						data, dataSize);
+
+					delete msgMap;
 				} break;
 
 				case MAPDATA:

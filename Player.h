@@ -14,7 +14,8 @@ public:
 	virtual ~Player(void);
 
 	// Read input and update state accordingly.
-	virtual bool update (Model & model, double deltat);
+	virtual bool update(Model & model, double deltat);
+	bool update (Model & model, double deltat, char &command);
 
 	// Show the player.
 	virtual void display (View & view, double offsetx, double offsety, double scale);
