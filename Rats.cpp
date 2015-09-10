@@ -193,6 +193,90 @@ void server(int port)
 
 					delete[] data;
 				} break;
+
+				case COMMAND:
+				{
+					cout << "COMMAND: received command from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+
+					MsgPlayerCommand *msgCommand = (MsgPlayerCommand*)receivedData;
+
+					// SLP: find connection for this ip and port combination and check id
+					for (unsigned int i = 0; i < players.size(); i++)
+					{
+						if (players[i].ipAddress == remoteIP && players[i].portNumber == remotePort &&
+							players[i].id == msgCommand->_PlayerId)
+						{
+							cout << "* Address, Port and Id match... finding player object" << endl;
+							// Correct player, process and apply command.
+							// Need to find the otherplayer object for this player.
+							vector<Actor *> actors = model.getActors();
+
+							for (unsigned int j = 0; j < actors.size(); j++)
+							{
+								if (actors[j]->getType() == actors[j]->PLAYER)
+								{
+									OtherPlayer * player = (OtherPlayer*)actors[j];
+
+									if (player->GetPlayerId() == msgCommand->_PlayerId)
+									{
+										cout << "* Found player object... applying command" << endl;
+										// Apply command
+										player->SetCommand(msgCommand->_Command);
+
+										switch (msgCommand->_Command)
+										{
+											case 'W':
+											{
+												cout << "* Command: MOVE UP" << endl;
+											} break;
+
+											case 'S':
+											{
+												cout << "* Command: MOVE DOWN" << endl;
+											} break;
+
+											case 'A':
+											{
+												cout << "* Command: MOVE LEFT" << endl;
+											} break;
+
+											case 'D':
+											{
+												cout << "* Command: MOVE RIGHT" << endl;
+											} break;
+
+											case VK_UP:
+											{
+												cout << "* Command: FIRE UP" << endl;
+											} break;
+
+											case VK_DOWN:
+											{
+												cout << "* Command: FIRE DOWN" << endl;
+											} break;
+
+											case VK_LEFT:
+											{
+												cout << "* Command: FIRE LEFT" << endl;
+											} break;
+
+											case VK_RIGHT:
+											{
+												cout << "* Command: FIRE RIGHT" << endl;
+											}
+										} // end switch
+
+										// found player, exit loop
+										break;
+									}
+								}
+							} // end for j
+
+							// found matching player, exit loop
+							break;
+						} // end if
+					} // end for i
+				} break;
 			} // end switch
 		}
 
@@ -293,15 +377,33 @@ void client(int port, unsigned long serverIP, int serverPort)
 		char command;
 		player->update(model, deltat, command);
 
-		// send command to server
-		MsgPlayerCommand * msgCommand = new MsgPlayerCommand(player->GetPlayerId(), command);
-		char * data = (char*)msgCommand;
-		size_t dataSize = sizeof(MsgPlayerCommand);
+		switch (command)
+		{
+			case 'W':
+			case 'S':
+			case 'A':
+			case 'D':
+			case VK_UP:
+			case VK_DOWN:
+			case VK_LEFT:
+			case VK_RIGHT:
+			{
+				// send command to server
+				MsgPlayerCommand * msgCommand = new MsgPlayerCommand(player->GetPlayerId(), command);
+				char * data = (char*)msgCommand;
+				size_t dataSize = sizeof(MsgPlayerCommand);
 
-		nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
-			data, dataSize);
+				nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
+					data, dataSize);
 
-		delete msgCommand;
+				cout << "Sending command code: " << command << endl;
+
+				delete msgCommand;
+
+				// reset command
+				command = '\0';
+			}
+		} // end switch
 
 		//switch (command)
 		//{
