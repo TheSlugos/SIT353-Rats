@@ -79,6 +79,7 @@
   <ItemGroup>
     <ClCompile Include="Actor.cpp" />
     <ClCompile Include="Bullet.cpp" />
+    <ClCompile Include="DummyActor.cpp" />
     <ClCompile Include="Maze.cpp" />
     <ClCompile Include="MazeCreator.cpp" />
     <ClCompile Include="Model.cpp" />
@@ -94,6 +95,7 @@
   <ItemGroup>
     <ClInclude Include="Actor.h" />
     <ClInclude Include="Bullet.h" />
+    <ClInclude Include="DummyActor.h" />
     <ClInclude Include="Maze.h" />
     <ClInclude Include="MazeCreator.h" />
     <ClInclude Include="Messages.h" />

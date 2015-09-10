@@ -28,7 +28,7 @@ protected:
 	bool basicUpdate (Model & model, double deltat);
 
 public:
-	enum ActorTypes { UNDEFINED, PLAYER, RAT, BULLET, RATFACTORY, SHIP };
+	enum ActorTypes { UNDEFINED, PLAYER, RAT, BULLET, RATFACTORY, SHIP, OTHERPLAYER };
 
 	Actor(void);
 	virtual ~Actor(void);

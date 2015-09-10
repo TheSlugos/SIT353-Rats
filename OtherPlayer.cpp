@@ -12,7 +12,7 @@ OtherPlayer::OtherPlayer() : Actor()
 	radius = 7.0;
 	speed = 50.0;
 
-	type = PLAYER;
+	type = OTHERPLAYER;
 }
 
 OtherPlayer::~OtherPlayer(void)
@@ -54,6 +54,9 @@ bool OtherPlayer::update(Model & model, double deltat)
 	{
 		model.addActor(new Bullet(bulletposx, bulletposy, speed * (bulletposx - posx) / radius, speed * (bulletposy - posy) / radius, this));
 	}
+
+	// reset _Command otherwise every update the same command will be applied
+	_Command = 0;
 
 	return true;
 }

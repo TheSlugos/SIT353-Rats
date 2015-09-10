@@ -7,6 +7,7 @@ class RatFactory : public Actor
 {
 public:
 	RatFactory(void);
+
 	virtual ~RatFactory(void);
 
 	// Read input and update state accordingly. Rats try to move towards players and away from other rats.
