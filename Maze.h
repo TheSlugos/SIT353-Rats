@@ -74,6 +74,9 @@ public:
 
 	char * serializewalls(int msgCode, size_t& size);
 	void deserializewalls(char * wallData);
+
+	char * serializeactors(int msgCode, size_t& size);
+	void deserializeactors(char * actorData);
 };
 
 #endif // __RATS_MAZE

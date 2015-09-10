@@ -93,6 +93,14 @@ void server(int port)
 		// Allow the environment to update.
 		model.update(deltat);
 
+		char * actorData;
+		size_t dataSize;
+
+		actorData = model.serializeactors(UPDATE, dataSize);
+
+		// cleanup
+		delete[] actorData;
+
 		// Schedule a screen update event.
 		view.clearScreen();
 		double offsetx = 0.0;
@@ -223,48 +231,48 @@ void server(int port)
 										// Apply command
 										player->SetCommand(msgCommand->_Command);
 
-										switch (msgCommand->_Command)
-										{
-											case 'W':
-											{
-												cout << "* Command: MOVE UP" << endl;
-											} break;
+										//switch (msgCommand->_Command)
+										//{
+										//	case 'W':
+										//	{
+										//		cout << "* Command: MOVE UP" << endl;
+										//	} break;
 
-											case 'S':
-											{
-												cout << "* Command: MOVE DOWN" << endl;
-											} break;
+										//	case 'S':
+										//	{
+										//		cout << "* Command: MOVE DOWN" << endl;
+										//	} break;
 
-											case 'A':
-											{
-												cout << "* Command: MOVE LEFT" << endl;
-											} break;
+										//	case 'A':
+										//	{
+										//		cout << "* Command: MOVE LEFT" << endl;
+										//	} break;
 
-											case 'D':
-											{
-												cout << "* Command: MOVE RIGHT" << endl;
-											} break;
+										//	case 'D':
+										//	{
+										//		cout << "* Command: MOVE RIGHT" << endl;
+										//	} break;
 
-											case VK_UP:
-											{
-												cout << "* Command: FIRE UP" << endl;
-											} break;
+										//	case VK_UP:
+										//	{
+										//		cout << "* Command: FIRE UP" << endl;
+										//	} break;
 
-											case VK_DOWN:
-											{
-												cout << "* Command: FIRE DOWN" << endl;
-											} break;
+										//	case VK_DOWN:
+										//	{
+										//		cout << "* Command: FIRE DOWN" << endl;
+										//	} break;
 
-											case VK_LEFT:
-											{
-												cout << "* Command: FIRE LEFT" << endl;
-											} break;
+										//	case VK_LEFT:
+										//	{
+										//		cout << "* Command: FIRE LEFT" << endl;
+										//	} break;
 
-											case VK_RIGHT:
-											{
-												cout << "* Command: FIRE RIGHT" << endl;
-											}
-										} // end switch
+										//	case VK_RIGHT:
+										//	{
+										//		cout << "* Command: FIRE RIGHT" << endl;
+										//	}
+										//} // end switch
 
 										// found player, exit loop
 										break;

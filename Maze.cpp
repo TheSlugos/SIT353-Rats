@@ -260,7 +260,7 @@ char * Maze::serializewalls(int msgCode, size_t& size)
 	ptr += sizeof(int);
 
 	// add each wall
-	for (int i = 0; i < walls.size(); i++)
+	for (unsigned int i = 0; i < walls.size(); i++)
 	{
 		// add x1
 		int * x1 = (int*)(data + ptr);
@@ -283,11 +283,63 @@ char * Maze::serializewalls(int msgCode, size_t& size)
 	return data;
 }
 
+char * Maze::serializeactors(int msgCode, size_t& size)
+{
+	// data size: message code + type, x, y for each actor
+	size = sizeof(int) + + sizeof(size_t) + actors.size() * (sizeof(int) + sizeof(double) + sizeof(double));
+	size_t totalActors = actors.size();
+
+	// allocate space to hold actor data, delete outside
+	char * data = new char[size];
+
+	// data position pointer
+	int ptr = 0;
+	
+	// store msgcode
+	*(int*)data = msgCode;
+	ptr += sizeof(int);
+
+	// store number of actors
+	*(int*)(data + ptr) = totalActors;
+	ptr += sizeof(size_t);
+
+	// store data for each actor
+	for (unsigned int i = 0; i < actors.size(); i++)
+	{
+		double x, y;
+		int type;
+
+		type = actors[i]->getType();
+		actors[i]->getPosition(x, y);
+
+		*(int*)(data + ptr) = type;
+		ptr += sizeof(int);
+		
+		// SLP:TODO: if type == player, store id
+		// else store -1;
+
+		*(double*)(data + ptr) = x;
+		ptr += sizeof(double);
+
+		*(double*)(data + ptr) = y;
+		ptr += sizeof(double);
+	}
+
+	return data;
+}
+
 void Maze::deserializewalls(char * wallData)
 {
 	int ptr = 0;
 
 	// empty walls
+	for (int i = 0; i < walls.size(); i++)
+	{
+		// pointers so need to delete them
+		delete walls[i];
+	}
+
+	// clear vector
 	walls.clear();
 
 	int noOfWalls = *(int*)wallData;
@@ -304,4 +356,27 @@ void Maze::deserializewalls(char * wallData)
 			));
 		ptr += 4 * sizeof(int);
 	}
+}
+
+void Maze::deserializeactors(char * actorData)
+{
+	// data pointer
+	int ptr = 0;
+
+	// need to clear all actors, except this player
+	// pass player ptr into this method
+
+	// for each actor in model,
+	// if actor != player delete actor, erase actor, use shaun's method for erasing in a loop
+
+	// for each actor in data,
+	// get type from data, increment ptr
+	// get id from data, increment ptr
+	// get coordinates from data, increment ptr
+
+	// if id == -1
+	//		create new actor of type
+	//		set coordinates of actor
+	// else
+	//		set coordinates of player
 }
