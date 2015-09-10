@@ -6,9 +6,15 @@
 #include "MazeCreator.h"
 
 #include "Player.h"
+#include "OtherPlayer.h"
 #include "Rat.h"
 #include "Bullet.h"
 #include "RatFactory.h"
+#include "DummyActor.h"
+
+using namespace std;
+
+const int NOTAPLAYER = -1;
 
 Wall::Wall (int xa, int ya, int xb, int yb) : x1(xa), y1(ya), x2(xb), y2(yb)
 {
@@ -285,9 +291,19 @@ char * Maze::serializewalls(int msgCode, size_t& size)
 
 char * Maze::serializeactors(int msgCode, size_t& size)
 {
-	// data size: message code + type, x, y for each actor
-	size = sizeof(int) + + sizeof(size_t) + actors.size() * (sizeof(int) + sizeof(double) + sizeof(double));
+	cout << "SERIALIZE ACTORS..." << endl;
+	// need to store radius
+	// need to create a dummy actor for client, with x,y,radius,colour
+
+	// data size: message code + type, id, radius, x, y for each actor
 	size_t totalActors = actors.size();
+
+	cout << " * Total Actors: " << totalActors << endl;
+
+	size = sizeof(int) + sizeof(size_t) + totalActors * (sizeof(int) + sizeof(int) + 
+		sizeof(double) + sizeof(double) + sizeof(double));
+
+	cout << " * Total Bytes: " << size << endl;
 
 	// allocate space to hold actor data, delete outside
 	char * data = new char[size];
@@ -308,15 +324,33 @@ char * Maze::serializeactors(int msgCode, size_t& size)
 	{
 		double x, y;
 		int type;
+		double radius;
 
 		type = actors[i]->getType();
 		actors[i]->getPosition(x, y);
+		radius = actors[i]->getRadius();
 
+		cout << " * " << i << " - Type: " << type << " (" << x << "," << y << ") Radius: " << radius << endl;
+		
 		*(int*)(data + ptr) = type;
 		ptr += sizeof(int);
 		
 		// SLP:TODO: if type == player, store id
 		// else store -1;
+		if (type == actors[i]->OTHERPLAYER)
+		{
+			OtherPlayer * other = (OtherPlayer*)actors[i];
+			*(int*)(data + ptr) = other->GetPlayerId();
+		}
+		else
+		{
+			*(int*)(data + ptr) = NOTAPLAYER;
+		}
+
+		ptr += sizeof(int);
+
+		*(double*)(data + ptr) = radius;
+		ptr += sizeof(double);
 
 		*(double*)(data + ptr) = x;
 		ptr += sizeof(double);
@@ -333,7 +367,7 @@ void Maze::deserializewalls(char * wallData)
 	int ptr = 0;
 
 	// empty walls
-	for (int i = 0; i < walls.size(); i++)
+	for (unsigned int i = 0; i < walls.size(); i++)
 	{
 		// pointers so need to delete them
 		delete walls[i];
@@ -358,25 +392,113 @@ void Maze::deserializewalls(char * wallData)
 	}
 }
 
-void Maze::deserializeactors(char * actorData)
+void Maze::deserializeactors(char * actorData, Player * player)
 {
+	cout << "DESERIALIZE ACTORS..." << endl;
+
 	// data pointer
 	int ptr = 0;
 
 	// need to clear all actors, except this player
 	// pass player ptr into this method
 
+	cout << " * Delete stored actors" << endl;
+
 	// for each actor in model,
 	// if actor != player delete actor, erase actor, use shaun's method for erasing in a loop
+	for (unsigned int i = 0; i < actors.size();)
+	{
+		// should be one of type PLAYER, rest will be OTHERPLAYER, RAT, etc
+		if (actors[i]->getType() != actors[i]->PLAYER)
+		{
+			delete actors[i];
+			actors.erase(actors.begin() + i);
+		}
+		else
+		{
+			// it is the player so leave it
+			i++;
+		}
+	}
 
 	// for each actor in data,
-	// get type from data, increment ptr
-	// get id from data, increment ptr
-	// get coordinates from data, increment ptr
+	size_t totalActors = *(size_t*)actorData;
 
-	// if id == -1
-	//		create new actor of type
-	//		set coordinates of actor
-	// else
-	//		set coordinates of player
+	cout << " * Total Actors: " << totalActors << endl;
+
+	ptr += sizeof(size_t);
+
+	for (unsigned int j = 0; j < totalActors; j++)
+	{
+		// get type from data, increment ptr
+		int type = *(int*)(actorData + ptr);
+		ptr += sizeof(int);
+
+		// get id from data, increment ptr
+		int actorId = *(int*)(actorData + ptr);
+		ptr += sizeof(int);
+
+		// get radius from data, increment ptr
+		double radius = *(double*)(actorData + ptr);
+		ptr += sizeof(double);
+
+		// get coordinates from data, increment ptr
+		double x = *(double*)(actorData + ptr);
+		ptr += sizeof(double);
+		
+		double y = *(double*)(actorData + ptr);
+		ptr += sizeof(double);
+
+		cout << " * " << j << " - Type: " << type << " (" << x << "," << y << ") Radius: " << radius << endl;
+
+		// if id == -1
+		if (actorId == player->GetPlayerId())
+		{
+			// update player coordinates
+			player->setPosition(x, y);
+		}
+		else
+		{
+			// create new actor of type
+			int r = 0, g = 0, b = 0;
+
+			switch (type)
+			{
+				case RAT:
+				{
+					// set red,green,blue as required
+					r = 23;
+					g = 23;
+					b = 80;
+				} break;
+
+				case OTHERPLAYER:
+				{
+					// set red, green, blue as required
+					r = 230;
+					g = 230;
+					b = 80;
+				} break;
+
+				case BULLET:
+				{
+					// set red, green, blue as required
+					g = 255;
+				} break;
+
+				case RATFACTORY:
+				{
+					// set red, green, blue as required
+					r = 230;
+					g = 23;
+					b = 80;
+				} break;
+			} // end switch
+			
+			// create new dummy actor
+			actors.push_back(new DummyActor(x, y, radius, r, g, b));
+		} // end if
+	}
+
+	cout << " * Bytes read: " << ptr << endl;
 }

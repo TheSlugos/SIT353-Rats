@@ -52,6 +52,8 @@ public:
 	Maze(bool isServer);
 	~Maze(void);
 
+	enum ActorTypes { UNDEFINED, PLAYER, RAT, BULLET, RATFACTORY, SHIP, OTHERPLAYER };
+
 	// Run a simulation step of the game environment.
 	void update (double deltat);
 
@@ -76,7 +78,7 @@ public:
 	void deserializewalls(char * wallData);
 
 	char * serializeactors(int msgCode, size_t& size);
-	void deserializeactors(char * actorData);
+	void deserializeactors(char * actorData, Player * player);
 };
 
 #endif // __RATS_MAZE

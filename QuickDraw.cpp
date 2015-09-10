@@ -234,7 +234,7 @@ int QuickDraw::lastKey ()
 {
 	int v = keypress;
 	// reset keypress
-	keypress = 0;
+	// keypress = 0;
 	return v;
 }
 

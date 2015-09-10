@@ -12,7 +12,6 @@ RatFactory::RatFactory(void)
 	type = RATFACTORY;
 }
 
-
 RatFactory::~RatFactory(void)
 {
 }
