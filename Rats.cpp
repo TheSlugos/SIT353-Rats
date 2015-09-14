@@ -76,6 +76,7 @@ void server(int port)
 	timer.mark(); // zero the timer.
 	double lasttime = timer.interval();
 	double avgdeltat = 0.0;
+	double updatetime = lasttime;
 
 	double scale = 1.0;
 
@@ -94,15 +95,29 @@ void server(int port)
 		// Allow the environment to update.
 		model.update(deltat);
 
-		//char * actorData;
-		//size_t dataSize;
+		// Send world updates to clients.
+		if (lasttime - updatetime > REFRESH_RATE)
+		{
+ 			updatetime = lasttime;
 
-		//actorData = model.serializeactors(UPDATE, dataSize);
+			// get update data if there are players
+			if (players.size() > 0)
+			{
+				size_t datasize;
+				char * data = model.serializeactors(UPDATEDATA, datasize);
 
-		//// cleanup
-		//delete[] actorData;
+				// go through each connected client
+				for (unsigned int i = 0; i < players.size(); i++)
+				{
+					// send the data
+					nm.SendData(players[i].ipAddress, players[i].portNumber, data, datasize);
+				}
 
-		// Schedule a screen update event.
+				delete[] data;
+			}
+		}
+
+		// Schedule a screen update event. REMOVE THIS
 		view.clearScreen();
 		double offsetx = 0.0;
 		double offsety = 0.0;
@@ -204,39 +219,41 @@ void server(int port)
 					delete[] data;
 				} break;
 
-				case UPDATE:
+				case QUIT:
 				{
-					cout << "UPDATE: update request received from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+					cout << "QUIT: received quit from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
 
-					// extract player position update info
-					MsgUpdateRequest * msgUpdate = (MsgUpdateRequest*)receivedData;
-					int playerId = msgUpdate->_PlayerId;
-					double x = msgUpdate->_X;
-					double y = msgUpdate->_Y;
-
-					cout << "Player position is (" << x << "," << y << ")" << endl;
-
-					// find player that matches ip, port and id
 					for (unsigned int i = 0; i < players.size(); i++)
 					{
-						if (remoteIP == players[i].ipAddress && remotePort == players[i].portNumber &&
-							playerId == players[i].id)
+						if (players[i].ipAddress == remoteIP && players[i].portNumber == remotePort)
 						{
-							//cout << "IP, Port and player id match, update position info" << endl;
-							players[i].player->setPosition(x, y);
 
-							break;
+							// need to find the actor representing this player
+							int index = -1;
+							vector<Actor *> actors = model.getActors();
+
+							for (unsigned int j = 0; j < actors.size(); j++)
+							{
+								if (actors[j] == players[i].player)
+								{
+									index = j;
+									break;
+								}
+							}
+
+							// remove this actor from the list of actors
+							if (index >= 0)
+							{
+								model.removeActor(index);
+							}
+
+							// delete this player object
+							delete players[i].player;
+
+							// erase connection info
+							players.erase(players.begin() + i);
 						}
 					}
-
-					// send update data back to the client
-					size_t datasize;
-					char * data = model.serializeactors(UPDATEDATA, datasize);
-
-					// send the data
-					nm.SendData(remoteIP, remotePort, data, datasize);
-
-					delete[] data;
 				} break;
 
 				case COMMAND:
@@ -409,18 +426,6 @@ void client(int port, unsigned long serverIP, int serverPort)
 
 			model.display(view, offsetx, offsety, scale);
 			view.swapBuffer();
-
-			//// request an update
-			//double x, y;
-			//player->getPosition(x, y);
-
-			//cout << "Player position is (" << x << "," << y << ")" << endl;
-
-			//MsgUpdateRequest * msgUpdate = new MsgUpdateRequest(player->GetPlayerId(), x, y);
-
-			//char * data = (char*)msgUpdate;
-			//size_t datasize = sizeof(MsgUpdateRequest);
-			//nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, data, datasize);
 		}
 
 		// receive updates from the server
@@ -493,6 +498,20 @@ void client(int port, unsigned long serverIP, int serverPort)
 
 			if (input.find("/quit") != string::npos)
 			{
+				// send quit message to the server
+				QuitMessage quitMsg;
+
+				// only send if connected to at least one server
+				if (servers.size() > 0)
+				{
+					// send it to each server
+					// SLP: sequence numbers, acks???
+					for (unsigned int i = 0; i < servers.size(); i++)
+					{
+						nm.SendData(servers[i].ipAddress, servers[i].portNumber, (char*)&quitMsg, sizeof(quitMsg));
+					}
+				}
+
 				// quit the application
 				break;
 			}

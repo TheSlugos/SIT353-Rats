@@ -228,6 +228,14 @@ void Maze::addActor (Actor * actor)
 	actors.push_back (actor);
 }
 
+void Maze::removeActor(int index)
+{
+	if (index >= 0 && index < actors.size())
+	{
+		actors.erase(actors.begin() + index);
+	}
+}
+
 void Maze::addPlayer (Player * player)
 {
 	addActor (player);
