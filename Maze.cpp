@@ -291,19 +291,19 @@ char * Maze::serializewalls(int msgCode, size_t& size)
 
 char * Maze::serializeactors(int msgCode, size_t& size)
 {
-	cout << "SERIALIZE ACTORS..." << endl;
+	//cout << "SERIALIZE ACTORS..." << endl;
 	// need to store radius
 	// need to create a dummy actor for client, with x,y,radius,colour
 
 	// data size: message code + type, id, radius, x, y for each actor
 	size_t totalActors = actors.size();
 
-	cout << " * Total Actors: " << totalActors << endl;
+	//cout << " * Total Actors: " << totalActors << endl;
 
 	size = sizeof(int) + sizeof(size_t) + totalActors * (sizeof(int) + sizeof(int) + 
 		sizeof(double) + sizeof(double) + sizeof(double));
 
-	cout << " * Total Bytes: " << size << endl;
+	//cout << " * Total Bytes: " << size << endl;
 
 	// allocate space to hold actor data, delete outside
 	char * data = new char[size];
@@ -330,7 +330,7 @@ char * Maze::serializeactors(int msgCode, size_t& size)
 		actors[i]->getPosition(x, y);
 		radius = actors[i]->getRadius();
 
-		cout << " * " << i << " - Type: " << type << " (" << x << "," << y << ") Radius: " << radius << endl;
+		//cout << " * " << i << " - Type: " << type << " (" << x << "," << y << ") Radius: " << radius << endl;
 		
 		*(int*)(data + ptr) = type;
 		ptr += sizeof(int);
@@ -394,7 +394,7 @@ void Maze::deserializewalls(char * wallData)
 
 void Maze::deserializeactors(char * actorData, Player * player)
 {
-	cout << "DESERIALIZE ACTORS..." << endl;
+	//cout << "DESERIALIZE ACTORS..." << endl;
 
 	// data pointer
 	int ptr = 0;
@@ -402,7 +402,7 @@ void Maze::deserializeactors(char * actorData, Player * player)
 	// need to clear all actors, except this player
 	// pass player ptr into this method
 
-	cout << " * Delete stored actors" << endl;
+	//cout << " * Delete stored actors" << endl;
 
 	// for each actor in model,
 	// if actor != player delete actor, erase actor, use shaun's method for erasing in a loop
@@ -424,7 +424,7 @@ void Maze::deserializeactors(char * actorData, Player * player)
 	// for each actor in data,
 	size_t totalActors = *(size_t*)actorData;
 
-	cout << " * Total Actors: " << totalActors << endl;
+	//cout << " * Total Actors: " << totalActors << endl;
 
 	ptr += sizeof(size_t);
 
@@ -449,7 +449,7 @@ void Maze::deserializeactors(char * actorData, Player * player)
 		double y = *(double*)(actorData + ptr);
 		ptr += sizeof(double);
 
-		cout << " * " << j << " - Type: " << type << " (" << x << "," << y << ") Radius: " << radius << endl;
+		//cout << " * " << j << " - Type: " << type << " (" << x << "," << y << ") Radius: " << radius << endl;
 
 		// if id == -1
 		if (actorId == player->GetPlayerId())
@@ -500,5 +500,5 @@ void Maze::deserializeactors(char * actorData, Player * player)
 		} // end if
 	}
 
-	cout << " * Bytes read: " << ptr << endl;
+	//cout << " * Bytes read: " << ptr << endl;
 }

@@ -60,8 +60,11 @@ class MsgUpdateRequest
 {
 public:
 	int _Id;
+	int _PlayerId;
+	double _X;
+	double _Y;
 
-	MsgUpdateRequest() : _Id(UPDATE) {}
+	MsgUpdateRequest(int playerId, double x, double y) : _Id(UPDATE), _PlayerId(playerId), _X(x), _Y(y) {}
 };
 
 //class MsgAddLink

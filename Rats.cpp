@@ -31,6 +31,7 @@ typedef struct NetworkNode
 	short id;						// player id
 	unsigned long ipAddress;		// player ip address
 	unsigned short portNumber;		// player port #
+	OtherPlayer * player;			// actor representing this player
 } NETWORKNODE;
 
 // Runs the server component of the application
@@ -157,6 +158,7 @@ void server(int port)
 						newNode.ipAddress = remoteIP;
 						newNode.portNumber = remotePort;
 						newNode.id = playerId;
+						newNode.player = newPlayer;
 
 						players.push_back(newNode);
 						
@@ -206,69 +208,35 @@ void server(int port)
 				{
 					cout << "UPDATE: update request received from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
 
-					// send update data
+					// extract player position update info
+					MsgUpdateRequest * msgUpdate = (MsgUpdateRequest*)receivedData;
+					int playerId = msgUpdate->_PlayerId;
+					double x = msgUpdate->_X;
+					double y = msgUpdate->_Y;
+
+					cout << "Player position is (" << x << "," << y << ")" << endl;
+
+					// find player that matches ip, port and id
+					for (unsigned int i = 0; i < players.size(); i++)
+					{
+						if (remoteIP == players[i].ipAddress && remotePort == players[i].portNumber &&
+							playerId == players[i].id)
+						{
+							//cout << "IP, Port and player id match, update position info" << endl;
+							players[i].player->setPosition(x, y);
+
+							break;
+						}
+					}
+
+					// send update data back to the client
 					size_t datasize;
 					char * data = model.serializeactors(UPDATEDATA, datasize);
 
-					// send data to the newly joined client
+					// send the data
 					nm.SendData(remoteIP, remotePort, data, datasize);
 
 					delete[] data;
-				} break;
-
-				case POSITION:
-				{
-					cout << "POSITION: position update received from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
-
-					MsgPlayerPosition * msgPosition = (MsgPlayerPosition*)receivedData;
-
-					cout << " * Message Player id: " << msgPosition->_PlayerId << endl;
-					
-					// SLP: find connection info and check player id matches
-					for (unsigned int i = 0; i < players.size(); i++)
-					{
-						if (players[i].ipAddress == remoteIP && players[i].portNumber == remotePort)
-						{
-							cout << " * Address information is for Player id" << players[i].id << endl;
-
-							if (players[i].id == msgPosition->_PlayerId)
-							{
-								
-									cout << " * Address, Port and Id match... finding player object" << endl;
-								// Correct player, apply position update
-								// Need to find the otherplayer object for this player.
-								vector<Actor *> actors = model.getActors();
-
-								// if pointer to otherplayer object was attached to the network information this would be easier
-								// getactorid should be part of base class (setactorid???)
-								for (unsigned int j = 0; j < actors.size(); j++)
-								{
-									if (actors[j]->getType() == actors[j]->OTHERPLAYER)
-									{
-										OtherPlayer * player = (OtherPlayer*)actors[j];
-
-										if (player->GetPlayerId() == msgPosition->_PlayerId)
-										{
-											cout << " * Found player object...setting position to (" <<
-												msgPosition->_X << "," << msgPosition->_Y << ")" << endl;
-
-											player->setPosition(msgPosition->_X, msgPosition->_Y);
-
-											// position changed
-											break;
-										} // end if
-									} // end if
-								} // end for
-
-								// found correct player
-								break;
-							} // end  if
-							else
-							{
-								cout << "Player Id does not match that address information" << endl;
-							}
-						} // end if
-					} // end for
 				} break;
 
 				case COMMAND:
@@ -286,73 +254,19 @@ void server(int port)
 							cout << "* Address, Port and Id match... finding player object" << endl;
 							// Correct player, process and apply command.
 							// Need to find the otherplayer object for this player.
-							vector<Actor *> actors = model.getActors();
+							players[i].player->SetCommand(msgCommand->_Command);
 
-							for (unsigned int j = 0; j < actors.size(); j++)
-							{
-								if (actors[j]->getType() == actors[j]->OTHERPLAYER)
-								{
-									OtherPlayer * player = (OtherPlayer*)actors[j];
+							// send update data back to the client
+							size_t datasize;
+							char * data = model.serializeactors(UPDATEDATA, datasize);
 
-									if (player->GetPlayerId() == msgCommand->_PlayerId)
-									{
-										cout << "* Found player object... applying command" << endl;
-										// Apply command
-										player->SetCommand(msgCommand->_Command);
-
-										//switch (msgCommand->_Command)
-										//{
-										//	case 'W':
-										//	{
-										//		cout << "* Command: MOVE UP" << endl;
-										//	} break;
-
-										//	case 'S':
-										//	{
-										//		cout << "* Command: MOVE DOWN" << endl;
-										//	} break;
-
-										//	case 'A':
-										//	{
-										//		cout << "* Command: MOVE LEFT" << endl;
-										//	} break;
-
-										//	case 'D':
-										//	{
-										//		cout << "* Command: MOVE RIGHT" << endl;
-										//	} break;
-
-										//	case VK_UP:
-										//	{
-										//		cout << "* Command: FIRE UP" << endl;
-										//	} break;
-
-										//	case VK_DOWN:
-										//	{
-										//		cout << "* Command: FIRE DOWN" << endl;
-										//	} break;
-
-										//	case VK_LEFT:
-										//	{
-										//		cout << "* Command: FIRE LEFT" << endl;
-										//	} break;
-
-										//	case VK_RIGHT:
-										//	{
-										//		cout << "* Command: FIRE RIGHT" << endl;
-										//	}
-										//} // end switch
-
-										// found player, exit loop
-										break;
-									}
-								}
-							} // end for j
+							// send the data
+							nm.SendData(remoteIP, remotePort, data, datasize);
 
 							// found matching player, exit loop
 							break;
 						} // end if
-					} // end for i
+					} // end for
 				} break;
 			} // end switch
 		}
@@ -461,41 +375,25 @@ void client(int port, unsigned long serverIP, int serverPort)
 			case 'S':
 			case 'A':
 			case 'D':
-			{
-				// position update to server
-				double x, y;
-
-				player->getPosition(x, y);
-				MsgPlayerPosition * msgPosition = new MsgPlayerPosition(player->GetPlayerId(), x, y);
-				char * data = (char*)msgPosition;
-				size_t datasize = sizeof(MsgPlayerPosition);
-
-				nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,data, datasize);
-
-				delete msgPosition;
-
-				//MsgPlayerCommand * msgCommand = new MsgPlayerCommand(player->GetPlayerId(), command);
-				//char * data = (char*)msgCommand;
-				//size_t dataSize = sizeof(MsgPlayerCommand);
-
-				//nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
-				//	data, dataSize);
-
-				//cout << "Sending command code: " << command << endl;
-
-				//delete msgCommand;
-
-				//// reset command
-				//command = '\0';
-			} break;
-
 			case VK_UP:
 			case VK_DOWN:
 			case VK_LEFT:
 			case VK_RIGHT:
 			{
-				// go through actors, send bullet information to the server, or
-				// send bullet creation information to the server
+				// send command to the server
+				MsgPlayerCommand * msgCommand = new MsgPlayerCommand(player->GetPlayerId(), command);
+				char * data = (char*)msgCommand;
+				size_t dataSize = sizeof(MsgPlayerCommand);
+
+				nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
+					data, dataSize);
+
+				cout << "Sending command code: " << command << endl;
+
+				delete msgCommand;
+
+				// reset command
+				command = '\0';
 			} break;
 		} // end switch
 
@@ -512,11 +410,17 @@ void client(int port, unsigned long serverIP, int serverPort)
 			model.display(view, offsetx, offsety, scale);
 			view.swapBuffer();
 
-			// request an update
-			MsgUpdateRequest * msgUpdate = new MsgUpdateRequest();
-			char * data = (char*)msgUpdate;
-			size_t datasize = sizeof(MsgUpdateRequest);
-			nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, data, datasize);
+			//// request an update
+			//double x, y;
+			//player->getPosition(x, y);
+
+			//cout << "Player position is (" << x << "," << y << ")" << endl;
+
+			//MsgUpdateRequest * msgUpdate = new MsgUpdateRequest(player->GetPlayerId(), x, y);
+
+			//char * data = (char*)msgUpdate;
+			//size_t datasize = sizeof(MsgUpdateRequest);
+			//nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, data, datasize);
 		}
 
 		// receive updates from the server
@@ -570,7 +474,7 @@ void client(int port, unsigned long serverIP, int serverPort)
 
 				case UPDATEDATA:
 				{
-					cout << "UPDATEDATA: received actor data from server" << endl;
+					//cout << "UPDATEDATA: received actor data from server" << endl;
 
 					char * msgData = receivedData + sizeof(int);	// skip msgcode
 					model.deserializeactors(msgData, player);
