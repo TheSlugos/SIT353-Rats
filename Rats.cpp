@@ -31,6 +31,7 @@ typedef struct NetworkNode
 	short id;						// player id
 	unsigned long ipAddress;		// player ip address
 	unsigned short portNumber;		// player port #
+	OtherPlayer * player;			// actor representing this player
 } NETWORKNODE;
 
 // Runs the server component of the application
@@ -75,6 +76,7 @@ void server(int port)
 	timer.mark(); // zero the timer.
 	double lasttime = timer.interval();
 	double avgdeltat = 0.0;
+	double updatetime = lasttime;
 
 	double scale = 1.0;
 
@@ -93,15 +95,29 @@ void server(int port)
 		// Allow the environment to update.
 		model.update(deltat);
 
-		//char * actorData;
-		//size_t dataSize;
+		// Send world updates to clients.
+		if (lasttime - updatetime > REFRESH_RATE)
+		{
+ 			updatetime = lasttime;
 
-		//actorData = model.serializeactors(UPDATE, dataSize);
+			// get update data if there are players
+			if (players.size() > 0)
+			{
+				size_t datasize;
+				char * data = model.serializeactors(UPDATEDATA, datasize);
 
-		//// cleanup
-		//delete[] actorData;
+				// go through each connected client
+				for (unsigned int i = 0; i < players.size(); i++)
+				{
+					// send the data
+					nm.SendData(players[i].ipAddress, players[i].portNumber, data, datasize);
+				}
 
-		// Schedule a screen update event.
+				delete[] data;
+			}
+		}
+
+		// Schedule a screen update event. REMOVE THIS
 		view.clearScreen();
 		double offsetx = 0.0;
 		double offsety = 0.0;
@@ -157,6 +173,7 @@ void server(int port)
 						newNode.ipAddress = remoteIP;
 						newNode.portNumber = remotePort;
 						newNode.id = playerId;
+						newNode.player = newPlayer;
 
 						players.push_back(newNode);
 						
@@ -202,73 +219,41 @@ void server(int port)
 					delete[] data;
 				} break;
 
-				case UPDATE:
+				case QUIT:
 				{
-					cout << "UPDATE: update request received from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
+					cout << "QUIT: received quit from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
 
-					// send update data
-					size_t datasize;
-					char * data = model.serializeactors(UPDATEDATA, datasize);
-
-					// send data to the newly joined client
-					nm.SendData(remoteIP, remotePort, data, datasize);
-
-					delete[] data;
-				} break;
-
-				case POSITION:
-				{
-					cout << "POSITION: position update received from " << nm.IPtoString(remoteIP) << ":" << remotePort << endl;
-
-					MsgPlayerPosition * msgPosition = (MsgPlayerPosition*)receivedData;
-
-					cout << " * Message Player id: " << msgPosition->_PlayerId << endl;
-					
-					// SLP: find connection info and check player id matches
 					for (unsigned int i = 0; i < players.size(); i++)
 					{
 						if (players[i].ipAddress == remoteIP && players[i].portNumber == remotePort)
 						{
-							cout << " * Address information is for Player id" << players[i].id << endl;
 
-							if (players[i].id == msgPosition->_PlayerId)
+							// need to find the actor representing this player
+							int index = -1;
+							vector<Actor *> actors = model.getActors();
+
+							for (unsigned int j = 0; j < actors.size(); j++)
 							{
-								
-									cout << " * Address, Port and Id match... finding player object" << endl;
-								// Correct player, apply position update
-								// Need to find the otherplayer object for this player.
-								vector<Actor *> actors = model.getActors();
-
-								// if pointer to otherplayer object was attached to the network information this would be easier
-								// getactorid should be part of base class (setactorid???)
-								for (unsigned int j = 0; j < actors.size(); j++)
+								if (actors[j] == players[i].player)
 								{
-									if (actors[j]->getType() == actors[j]->OTHERPLAYER)
-									{
-										OtherPlayer * player = (OtherPlayer*)actors[j];
-
-										if (player->GetPlayerId() == msgPosition->_PlayerId)
-										{
-											cout << " * Found player object...setting position to (" <<
-												msgPosition->_X << "," << msgPosition->_Y << ")" << endl;
-
-											player->setPosition(msgPosition->_X, msgPosition->_Y);
-
-											// position changed
-											break;
-										} // end if
-									} // end if
-								} // end for
-
-								// found correct player
-								break;
-							} // end  if
-							else
-							{
-								cout << "Player Id does not match that address information" << endl;
+									index = j;
+									break;
+								}
 							}
-						} // end if
-					} // end for
+
+							// remove this actor from the list of actors
+							if (index >= 0)
+							{
+								model.removeActor(index);
+							}
+
+							// delete this player object
+							delete players[i].player;
+
+							// erase connection info
+							players.erase(players.begin() + i);
+						}
+					}
 				} break;
 
 				case COMMAND:
@@ -286,73 +271,19 @@ void server(int port)
 							cout << "* Address, Port and Id match... finding player object" << endl;
 							// Correct player, process and apply command.
 							// Need to find the otherplayer object for this player.
-							vector<Actor *> actors = model.getActors();
+							players[i].player->SetCommand(msgCommand->_Command);
 
-							for (unsigned int j = 0; j < actors.size(); j++)
-							{
-								if (actors[j]->getType() == actors[j]->OTHERPLAYER)
-								{
-									OtherPlayer * player = (OtherPlayer*)actors[j];
+							// send update data back to the client
+							size_t datasize;
+							char * data = model.serializeactors(UPDATEDATA, datasize);
 
-									if (player->GetPlayerId() == msgCommand->_PlayerId)
-									{
-										cout << "* Found player object... applying command" << endl;
-										// Apply command
-										player->SetCommand(msgCommand->_Command);
-
-										//switch (msgCommand->_Command)
-										//{
-										//	case 'W':
-										//	{
-										//		cout << "* Command: MOVE UP" << endl;
-										//	} break;
-
-										//	case 'S':
-										//	{
-										//		cout << "* Command: MOVE DOWN" << endl;
-										//	} break;
-
-										//	case 'A':
-										//	{
-										//		cout << "* Command: MOVE LEFT" << endl;
-										//	} break;
-
-										//	case 'D':
-										//	{
-										//		cout << "* Command: MOVE RIGHT" << endl;
-										//	} break;
-
-										//	case VK_UP:
-										//	{
-										//		cout << "* Command: FIRE UP" << endl;
-										//	} break;
-
-										//	case VK_DOWN:
-										//	{
-										//		cout << "* Command: FIRE DOWN" << endl;
-										//	} break;
-
-										//	case VK_LEFT:
-										//	{
-										//		cout << "* Command: FIRE LEFT" << endl;
-										//	} break;
-
-										//	case VK_RIGHT:
-										//	{
-										//		cout << "* Command: FIRE RIGHT" << endl;
-										//	}
-										//} // end switch
-
-										// found player, exit loop
-										break;
-									}
-								}
-							} // end for j
+							// send the data
+							nm.SendData(remoteIP, remotePort, data, datasize);
 
 							// found matching player, exit loop
 							break;
 						} // end if
-					} // end for i
+					} // end for
 				} break;
 			} // end switch
 		}
@@ -461,41 +392,25 @@ void client(int port, unsigned long serverIP, int serverPort)
 			case 'S':
 			case 'A':
 			case 'D':
-			{
-				// position update to server
-				double x, y;
-
-				player->getPosition(x, y);
-				MsgPlayerPosition * msgPosition = new MsgPlayerPosition(player->GetPlayerId(), x, y);
-				char * data = (char*)msgPosition;
-				size_t datasize = sizeof(MsgPlayerPosition);
-
-				nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,data, datasize);
-
-				delete msgPosition;
-
-				//MsgPlayerCommand * msgCommand = new MsgPlayerCommand(player->GetPlayerId(), command);
-				//char * data = (char*)msgCommand;
-				//size_t dataSize = sizeof(MsgPlayerCommand);
-
-				//nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
-				//	data, dataSize);
-
-				//cout << "Sending command code: " << command << endl;
-
-				//delete msgCommand;
-
-				//// reset command
-				//command = '\0';
-			} break;
-
 			case VK_UP:
 			case VK_DOWN:
 			case VK_LEFT:
 			case VK_RIGHT:
 			{
-				// go through actors, send bullet information to the server, or
-				// send bullet creation information to the server
+				// send command to the server
+				MsgPlayerCommand * msgCommand = new MsgPlayerCommand(player->GetPlayerId(), command);
+				char * data = (char*)msgCommand;
+				size_t dataSize = sizeof(MsgPlayerCommand);
+
+				nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
+					data, dataSize);
+
+				cout << "Sending command code: " << command << endl;
+
+				delete msgCommand;
+
+				// reset command
+				command = '\0';
 			} break;
 		} // end switch
 
@@ -511,12 +426,6 @@ void client(int port, unsigned long serverIP, int serverPort)
 
 			model.display(view, offsetx, offsety, scale);
 			view.swapBuffer();
-
-			// request an update
-			MsgUpdateRequest * msgUpdate = new MsgUpdateRequest();
-			char * data = (char*)msgUpdate;
-			size_t datasize = sizeof(MsgUpdateRequest);
-			nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, data, datasize);
 		}
 
 		// receive updates from the server
@@ -570,7 +479,7 @@ void client(int port, unsigned long serverIP, int serverPort)
 
 				case UPDATEDATA:
 				{
-					cout << "UPDATEDATA: received actor data from server" << endl;
+					//cout << "UPDATEDATA: received actor data from server" << endl;
 
 					char * msgData = receivedData + sizeof(int);	// skip msgcode
 					model.deserializeactors(msgData, player);
@@ -589,6 +498,20 @@ void client(int port, unsigned long serverIP, int serverPort)
 
 			if (input.find("/quit") != string::npos)
 			{
+				// send quit message to the server
+				QuitMessage quitMsg;
+
+				// only send if connected to at least one server
+				if (servers.size() > 0)
+				{
+					// send it to each server
+					// SLP: sequence numbers, acks???
+					for (unsigned int i = 0; i < servers.size(); i++)
+					{
+						nm.SendData(servers[i].ipAddress, servers[i].portNumber, (char*)&quitMsg, sizeof(quitMsg));
+					}
+				}
+
 				// quit the application
 				break;
 			}

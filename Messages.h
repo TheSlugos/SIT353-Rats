@@ -1,4 +1,4 @@
-enum MESSAGEID { JOIN, JOINACCEPT, REJECTED, UPDATE, UPDATEDATA, MAPDATA, MAPREQUEST, COMMAND, POSITION };
+enum MESSAGEID { JOIN, JOINACCEPT, REJECTED, UPDATEDATA, MAPDATA, MAPREQUEST, COMMAND, QUIT };
 enum REJECTREASON { GAMEFULL, ALREADYJOINED };
 
 class MsgJoin
@@ -45,24 +45,35 @@ public:
 	MsgPlayerCommand(int playerId, char command) : _Id(COMMAND), _PlayerId(playerId), _Command(command) {}
 };
 
-class MsgPlayerPosition
-{
-public:
-	int _Id;
-	int _PlayerId;
-	double _X;
-	double _Y;
-
-	MsgPlayerPosition(int playerId, double x, double y) : _Id(POSITION), _PlayerId(playerId), _X(x), _Y(y) {}
-};
-
-class MsgUpdateRequest
+class QuitMessage
 {
 public:
 	int _Id;
 
-	MsgUpdateRequest() : _Id(UPDATE) {}
+	QuitMessage() : _Id(QUIT) {}
 };
+
+//class MsgPlayerPosition
+//{
+//public:
+//	int _Id;
+//	int _PlayerId;
+//	double _X;
+//	double _Y;
+//
+//	MsgPlayerPosition(int playerId, double x, double y) : _Id(POSITION), _PlayerId(playerId), _X(x), _Y(y) {}
+//};
+//
+//class MsgUpdateRequest
+//{
+//public:
+//	int _Id;
+//	int _PlayerId;
+//	double _X;
+//	double _Y;
+//
+//	MsgUpdateRequest(int playerId, double x, double y) : _Id(UPDATE), _PlayerId(playerId), _X(x), _Y(y) {}
+//};
 
 //class MsgAddLink
 //{

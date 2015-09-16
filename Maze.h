@@ -65,6 +65,8 @@ public:
 
 	void addActor (Actor * actor);
 
+	void removeActor(int index);
+
 	// Add a player to the game. 
 	void addPlayer (Player * player);
 
