@@ -326,7 +326,58 @@ void NetworkManager::Close()
 	
 }
 
+// Get the LAN broadcast address
+// not sure how to go about searching the internet for a server
+// on an unknown address
+unsigned long NetworkManager::GetBroadcastAddress()
+{
+	unsigned long broadcastAddress = 0l;
+
+	// 4 bytes of IP address are packed backwards in a long
+	// in theory if OR the current IP addresswith 0xFF000000 should
+	// give the LAN broadcast address ???
+	if (!_Error)
+	{
+		broadcastAddress = inet_addr(_MyIPAddress.c_str()) | 0xFF000000;
+	}
+
+	//return in in network form for usage
+
+	return broadcastAddress;
+}
+
+bool NetworkManager::SendBroadCastData(unsigned short destPort, char * data, size_t dataLength)
+{
+	bool result = false;
+	char broadcast;
+	int len = sizeof(char);
+
+	getsockopt(_Socket, SOL_SOCKET, SO_BROADCAST, &broadcast, &len);
+
+	/*unsigned long host_addr = inet_addr("192.168.74.33");
+	unsigned long net_mask = inet_addr("255.255.255.0");
+	unsigned long net_addr = host_addr & net_mask;
+	unsigned long bc_addr = net_addr | (~net_mask);*/
+
+	broadcast = 'a';
+	// set socket broadcast option
+	// Set socket to non-blocking mode
+	if (!_Error)
+	{
+		if (setsockopt(_Socket, SOL_SOCKET, SO_BROADCAST, &broadcast, len) == SOCKET_ERROR)
+		{
+			SetError("Error setting socket to broadcast");
+		}
+	}
+
+	getsockopt(_Socket, SOL_SOCKET, SO_BROADCAST, &broadcast, &len);
+
+	unsigned long broadcastAddress = GetBroadcastAddress();
+
+	return SendData(broadcastAddress, destPort, data, dataLength);
+}
 // Utility function to convert network IP address into a string
+// Idiot use inet_hota
 string NetworkManager::IPtoString(unsigned long ipAddress)
 {
 	size_t size = sizeof(ipAddress);

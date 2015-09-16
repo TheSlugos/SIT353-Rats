@@ -1,4 +1,5 @@
-enum MESSAGEID { JOIN, JOINACCEPT, REJECTED, UPDATEDATA, MAPDATA, MAPREQUEST, COMMAND, QUIT };
+enum MESSAGEID { JOIN, JOINACCEPT, REJECTED, UPDATEDATA, MAPDATA, MAPREQUEST, COMMAND, QUIT, 
+	FINDSERVER, SERVERFOUND };
 enum REJECTREASON { GAMEFULL, ALREADYJOINED };
 
 class MsgJoin
@@ -51,6 +52,22 @@ public:
 	int _Id;
 
 	QuitMessage() : _Id(QUIT) {}
+};
+
+class FindServerMessage
+{
+public:
+	int _Id;
+
+	FindServerMessage() : _Id(FINDSERVER) {}
+};
+
+class ServerFoundMessage
+{
+public:
+	int _Id;
+
+	ServerFoundMessage() : _Id(SERVERFOUND) {}
 };
 
 //class MsgPlayerPosition
