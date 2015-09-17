@@ -192,9 +192,10 @@ void server(int port)
 
 					for (unsigned int i = 0; i < players.size(); i++)
 					{
-						cout << "\t" << "* " << players[i].id << "(" << nm.IPtoString(players[i].ipAddress)
+						cout << "\t" << "* " << players[i].id << " - (" << nm.IPtoString(players[i].ipAddress)
 							<< ":" << players[i].portNumber << ")" << endl;
 					}
+					cout << endl;
 
 					// create a join accept message
 					MsgAccepted * msg = new MsgAccepted(playerId);
@@ -231,6 +232,9 @@ void server(int port)
 					{
 						if (players[i].ipAddress == remoteIP && players[i].portNumber == remotePort)
 						{
+							// found player, send back quitack message
+							QuitAckMessage quitAckMsg;
+							nm.SendData(remoteIP, remotePort, (char*)&quitAckMsg, sizeof(quitAckMsg));
 
 							// need to find the actor representing this player
 							int index = -1;
@@ -256,6 +260,9 @@ void server(int port)
 
 							// erase connection info
 							players.erase(players.begin() + i);
+
+							// must have found the player
+							break;
 						}
 					}
 				} break;
@@ -329,6 +336,8 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 {
 	// stores the id of the server we are communicating with (for multiple)
 	int currentServer = -1;
+	// number of servers known currently
+	int knownServers = 0;
 
 	// stores list of known servers (for multiple)
 	vector<NETWORKNODE> servers;
@@ -351,6 +360,19 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 	}
 
 	cout << "Running as CLIENT on " << nm.MyIPAddress() << ":" << nm.MyPortNumber() << endl;
+
+	// Joining a server directly so add server to list of servers and set to default
+	if (gameState == JOINING)
+	{
+		// add the supplied server details
+		NETWORKNODE newServer;
+		newServer.id = knownServers++;
+		newServer.ipAddress = serverIP;
+		newServer.portNumber = serverPort;
+
+		// add server details to list of known servers
+		servers.push_back(newServer);
+	}
 
 	// SLP: the following lines should only be used once the server has connected
 	QuickDraw window;
@@ -389,6 +411,18 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 
 		switch (gameState)
 		{
+			case QUITTING:
+			{
+				// msg has been sent for this flag to be set
+				if (currtime - msgSentTime > MSG_TIMEOUT)
+				{
+					cout << "QUIT Message timeout, resending" << endl;
+					QuitMessage quitMsg;
+					nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, (char*)&quitMsg, sizeof(quitMsg));
+					msgSentTime = currtime;
+				}
+			} break;
+
 			case DISCOVERY:
 			{
 				// broadcast findserver message
@@ -430,23 +464,18 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 				// do initial setup and send join message
 				if (!stateMsgSent)
 				{
-					// add the supplied server details
-					NETWORKNODE newServer;
-					newServer.id = ++currentServer;
-					newServer.ipAddress = serverIP;
-					newServer.portNumber = serverPort;
-
-					// add server details to list of known servers
-					servers.push_back(newServer);
-
-					cout << "Attempting to JOIN server" << endl;
+					cout << "Attempting to JOIN server: " << nm.IPtoString(servers[currentServer].ipAddress)
+						<< ":" << servers[currentServer].portNumber << endl;
 
 					// SLP:TEST:Send a join message to the current server
 					MsgJoin joinMsg;
 					// using currentServer as idx only works if we don't delete servers, and add them in correct order
-					nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, (char*)&joinMsg, sizeof(joinMsg));
-					msgSentTime = currtime;
-					stateMsgSent = true;
+					if (currentServer >= 0)
+					{
+						nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, (char*)&joinMsg, sizeof(joinMsg));
+						msgSentTime = currtime;
+						stateMsgSent = true;
+					}
 				}
 				else // check for timeout and resend if required
 				{
@@ -458,8 +487,11 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 						// SLP:TEST:Send a join message to the current server
 						MsgJoin joinMsg;
 						// using currentServer as idx only works if we don't delete servers, and add them in correct order
-						nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, (char*)&joinMsg, sizeof(joinMsg));
-						msgSentTime = currtime;
+						if (currentServer >= 0)
+						{
+							nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, (char*)&joinMsg, sizeof(joinMsg));
+							msgSentTime = currtime;
+						}
 					}
 				}
 			} break;
@@ -476,10 +508,13 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 					char * data = (char*)&msgMap;
 					size_t dataSize = sizeof(msgMap);
 
-					nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
-						data, dataSize);
-					msgSentTime = currtime;
-					stateMsgSent = true;
+					if (currentServer >= 0)
+					{
+						nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
+							data, dataSize);
+						msgSentTime = currtime;
+						stateMsgSent = true;
+					}
 				}
 				else
 				{
@@ -495,9 +530,12 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 						char * data = (char*)&msgMap;
 						size_t dataSize = sizeof(msgMap);
 
-						nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
-							data, dataSize);
-						msgSentTime = currtime;
+						if (currentServer >= 0)
+						{
+							nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
+								data, dataSize);
+							msgSentTime = currtime;
+						}
 					}
 				}
 			} break;
@@ -525,10 +563,12 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 						char * data = (char*)msgCommand;
 						size_t dataSize = sizeof(MsgPlayerCommand);
 
-						nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
-							data, dataSize);
-
-						cout << "Sending command code: " << command << endl;
+						if (currentServer >= 0)
+						{
+							nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber,
+								data, dataSize);
+							cout << "Sending command code: " << command << endl;
+						}
 
 						delete msgCommand;
 
@@ -613,21 +653,50 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 				case SERVERFOUND:
 				{
 					cout << "Server response received, storing server details" << endl;
-
-					//NETWORKNODE serverNode;
-					//serverNode.id = ++currentServer;
-					//serverNode.ipAddress = remoteIP;
-					//serverNode.portNumber = remotePort;
-
-					//// store server details
-					//servers.push_back(serverNode);
 					
-					serverIP = remoteIP;
+					// see if we have discovered that server previously
+					bool serverFound = false;
+					for (unsigned int i = 0; i < servers.size(); i++)
+					{
+						if (servers[i].ipAddress == remoteIP && servers[i].portNumber == remotePort)
+						{
+							cout << "Server at " << nm.IPtoString(remoteIP) << ":" << remotePort <<
+								"is known already" << endl;
+							serverFound = true;
+						}
+					}
 
-					// change to JOIN mode
-					gameState = JOINING;
+					if (!serverFound)
+					{
+						cout << "Adding server " << nm.IPtoString(remoteIP) << ":" << remotePort << " to list of servers" << endl;
 
-					stateMsgSent = false;
+						NETWORKNODE serverNode;
+						serverNode.id = knownServers++;
+						serverNode.ipAddress = remoteIP;
+						serverNode.portNumber = remotePort;
+
+						// store server details
+						servers.push_back(serverNode);
+
+						// display discovered servers
+						cout << endl;
+						cout << "Discovered servers:" << endl;
+						for (unsigned int i = 0; i < servers.size(); i++)
+						{
+							cout << "\t* " << i << " - " << nm.IPtoString(servers[i].ipAddress) << ":" << servers[i].portNumber << endl;
+						}
+						cout << endl;
+					}
+
+					// change to JOIN modemove this to /join console command
+					//gameState = JOINING;
+					//stateMsgSent = false;
+				} break;
+
+				case QUITACK:
+				{
+					cout << "Quit Ack received, exiting" << endl;
+					gameState = SHUTDOWN;
 				} break;
 			} // end switch
 		}
@@ -647,19 +716,54 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 				QuitMessage quitMsg;
 
 				// only send if connected to at least one server
-				if (servers.size() > 0)
+				if (servers.size() > 0 && currentServer >= 0)
 				{
 					// send it to each server
 					// SLP: sequence numbers, acks???
-					for (unsigned int i = 0; i < servers.size(); i++)
+					/*for (unsigned int i = 0; i < servers.size(); i++)
 					{
 						nm.SendData(servers[i].ipAddress, servers[i].portNumber, (char*)&quitMsg, sizeof(quitMsg));
+					}*/
+					nm.SendData(servers[currentServer].ipAddress, servers[currentServer].portNumber, (char*)&quitMsg, sizeof(quitMsg));
+					msgSentTime = currtime;
+					gameState = QUITTING;
+				}
+			}
+			else if (input.find("/join") != string::npos)
+			{
+				if (gameState == DISCOVERY)
+				{
+					int serverChoice;
+
+					cin >> serverChoice;
+
+					if (serverChoice >= 0 && serverChoice < knownServers)
+					{
+						// store selected server
+						currentServer = serverChoice;
+
+						// reset message flag
+						stateMsgSent = false;
+
+						// change state
+						gameState = JOINING;
+					}
+					else
+					{
+						cout << "You entered and invalid server" << endl;
 					}
 				}
-
-				// quit the application
-				break;
+				else
+				{
+					cout << "You can only use /join during DISCOVERY" << endl;
+				}
 			}
+		}
+
+		if (gameState == SHUTDOWN)
+		{
+			// exit game
+			break;
 		}
 	} // end while
 
