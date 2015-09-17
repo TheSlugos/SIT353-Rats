@@ -372,6 +372,9 @@ void client(int gamestate, int port, int serverPort, unsigned long serverIP = 0l
 
 		// add server details to list of known servers
 		servers.push_back(newServer);
+
+		// 
+		++currentServer;
 	}
 
 	// SLP: the following lines should only be used once the server has connected
