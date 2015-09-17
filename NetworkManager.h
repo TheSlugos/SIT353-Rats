@@ -49,4 +49,6 @@ public:
 	unsigned short GetDropOutPortNumber() { return _DropOutPortNumber; }
 	bool Failed() { return _Error; }
 	string IPtoString(unsigned long ipAddress);
+	unsigned long GetBroadcastAddress();
+	bool SendBroadCastData(unsigned short destPort, char * data, size_t dataLength);
 };

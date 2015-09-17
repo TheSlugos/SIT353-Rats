@@ -1,6 +1,7 @@
 #include "Maze.h"
 #include "OtherPlayer.h"
 #include "Bullet.h"
+#include "Player.h"
 
 OtherPlayer::OtherPlayer() : Actor()
 {
@@ -73,5 +74,8 @@ void OtherPlayer::display(View & view, double offsetx, double offsety, double sc
 	int x = (int)((posx - (offsetx - cx)) * scale);
 	int y = (int)((posy - (offsety - cy)) * scale);
 
-	view.drawSolidCircle(x, y, (int)(scale * radius), 230, 230, 80);
+	int index = _PlayerId % maxColours;
+
+	view.drawSolidCircle(x, y, (int)(scale * radius),
+		colours[index][RED], colours[index][BLUE], colours[index][GREEN]);
 }
