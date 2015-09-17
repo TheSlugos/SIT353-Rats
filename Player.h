@@ -3,6 +3,13 @@
 
 #include "Actor.h"
 
+enum COL { RED, GREEN, BLUE };
+
+// array of player colours
+extern int colours[][3];
+// number of colours available for players
+extern int maxColours;
+
 class Player : public Actor
 {
 private:
