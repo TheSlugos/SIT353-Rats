@@ -483,9 +483,9 @@ void Maze::deserializeactors(char * actorData, Player * player)
 				case OTHERPLAYER:
 				{
 					// set red, green, blue as required
-					r = 230;
-					g = 230;
-					b = 80;
+					r = colours[actorId][RED];
+					g = colours[actorId][BLUE];
+					b = colours[actorId][GREEN];
 				} break;
 
 				case BULLET:
